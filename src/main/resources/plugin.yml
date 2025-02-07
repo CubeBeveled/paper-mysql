@@ -1,0 +1,4 @@
+name: paper-mysql
+version: '1.0'
+main: org.beveled.paperMysql.PaperMysql
+api-version: '1.21'
