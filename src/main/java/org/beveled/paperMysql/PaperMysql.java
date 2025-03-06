@@ -4,7 +4,6 @@ import ch.vorburger.exec.ManagedProcessException;
 import ch.vorburger.mariadb4j.DB;
 import ch.vorburger.mariadb4j.DBConfigurationBuilder;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
@@ -12,6 +11,7 @@ import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.logging.Logger;
 
 public final class PaperMysql extends JavaPlugin {
@@ -28,30 +28,33 @@ public final class PaperMysql extends JavaPlugin {
         if (!this.getDataFolder().exists()) this.getDataFolder().mkdir();
         if (!configFile.exists()) {
 
-                Map<String, Object> userData = new HashMap<>();
-                Map<String, Object> databases = new HashMap<>();
-                Map<String, Object> exampleDB = new HashMap<>();
+            Map<String, Object> userData = new HashMap<>();
+            Map<String, Object> databases = new HashMap<>();
+            Map<String, Object> exampleDB = new HashMap<>();
 
-                // Set user data
-                userData.put("username", "root");
-                userData.put("password", getRandomString(8));
+            // Set user data
+            userData.put("username", "root");
+            userData.put("password", getRandomString(8));
 
-                exampleDB.put("user", userData); // Put said user data into an user: thing
-                databases.put("luckperms", exampleDB); // Put user: into luckperms:
+            exampleDB.put("user", userData); // Put said user data into an user: thing
+            databases.put("luckperms", exampleDB); // Put user: into luckperms:
 
-                config.set("port", 3306);
-                config.set("databases", databases);
+            config.set("port", 3306);
+            config.set("databases", databases);
+            // DEBUG //
+            logger.info("Database data: " + databases);
+            // DEBUG //
 
-                try {
-                    config.save(configFile);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
+            try {
+                config.save(configFile);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }
 
         DBConfigurationBuilder dbConfig = DBConfigurationBuilder.newBuilder();
 
-        dbConfig.setPort(Integer.parseInt(config.get("port").toString()));
+        dbConfig.setPort(Integer.parseInt(Objects.requireNonNull(config.get("port")).toString()));
         dbConfig.setDataDir(this.getDataFolder().toString().concat("/data"));
         dbConfig.setLibDir(this.getDataFolder().toString().concat("/libs"));
 
@@ -59,17 +62,24 @@ public final class PaperMysql extends JavaPlugin {
         try {
             database = DB.newEmbeddedDB(dbConfig.build());
         } catch (ManagedProcessException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException();
         }
 
-        logger.info("Starting database on port " + config.get("port").toString());
+        logger.info("Starting database on port " + Objects.requireNonNull(config.get("port")));
         try {
             database.start();
         } catch (ManagedProcessException e) {
             throw new RuntimeException(e);
         }
 
+        // UPDATED CODE //
         Map<String, Object> databases = (Map<String, Object>) config.get("databases");
+        if (databases == null || databases.keySet().isEmpty()) {
+            logger.severe("Databases or the KeySet is null/empty");
+            return;
+        }
+        // UPDATED CODE //
+
         for (String dbName : databases.keySet()) {
             Map<String, String> user = (Map<String, String>) ((Map<String, Object>) databases.get(dbName)).get("user");
             try {
